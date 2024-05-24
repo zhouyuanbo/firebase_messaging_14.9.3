@@ -211,12 +211,19 @@ NSString *const kMessagingPresentationOptionsUserDefaults =
 #else
   NSDictionary *remoteNotification =
       notification.userInfo[UIApplicationLaunchOptionsRemoteNotificationKey];
+    
+  if(remoteNotification == nil && [notification.userInfo.allKeys containsObject: UIApplicationLaunchOptionsLocalNotificationKey]) {
+      UILocalNotification *localNotification = notification.userInfo[UIApplicationLaunchOptionsLocalNotificationKey];
+      remoteNotification = localNotification.userInfo;
+  }
 #endif
   if (remoteNotification != nil) {
     // If remoteNotification exists, it is the notification that opened the app.
     _initialNotification =
         [FLTFirebaseMessagingPlugin remoteMessageUserInfoToDict:remoteNotification];
-    _initialNoticationID = remoteNotification[@"gcm.message_id"];
+    if([remoteNotification.allKeys containsObject:@"gcm.message_id"]) {
+        _initialNoticationID = remoteNotification[@"gcm.message_id"];
+    }
   }
   _initialNotificationGathered = YES;
   [self initialNotificationCallback];
@@ -311,7 +318,7 @@ NSString *const kMessagingPresentationOptionsUserDefaults =
              (void (^)(UNNotificationPresentationOptions options))completionHandler
     API_AVAILABLE(macos(10.14), ios(10.0)) {
   // We only want to handle FCM notifications.
-  if (notification.request.content.userInfo[@"gcm.message_id"]) {
+  if (notification.request.content.userInfo[@"gcm.message_id"] || notification.request.content.userInfo[@"kNotificationChannelType"]) {
     NSDictionary *notificationDict =
         [FLTFirebaseMessagingPlugin NSDictionaryFromUNNotification:notification];
 
@@ -339,7 +346,12 @@ NSString *const kMessagingPresentationOptionsUserDefaults =
         presentationOptions |= UNNotificationPresentationOptionSound;
       }
     }
-    completionHandler(presentationOptions);
+    
+    if (notification.request.content.userInfo[@"gcm.message_id"]) {
+        completionHandler(presentationOptions);
+    } else {
+        completionHandler(UNNotificationPresentationOptionAlert);
+    }
   }
 }
 
@@ -352,8 +364,8 @@ NSString *const kMessagingPresentationOptionsUserDefaults =
   _notificationOpenedAppID = remoteNotification[@"gcm.message_id"];
   // We only want to handle FCM notifications and stop firing `onMessageOpenedApp()` when app is
   // coming from a terminated state.
-  if (_notificationOpenedAppID != nil &&
-      ![_initialNoticationID isEqualToString:_notificationOpenedAppID]) {
+  if ((_notificationOpenedAppID != nil &&
+      ![_initialNoticationID isEqualToString:_notificationOpenedAppID]) || remoteNotification[@"kNotificationChannelType"]) {
     NSDictionary *notificationDict =
         [FLTFirebaseMessagingPlugin remoteMessageUserInfoToDict:remoteNotification];
     [_channel invokeMethod:@"Messaging#onMessageOpenedApp" arguments:notificationDict];
@@ -1032,7 +1044,7 @@ NSString *const kMessagingPresentationOptionsUserDefaults =
     // Only return if initial notification was sent when app is terminated. Also ensure that
     // it was the initial notification that was tapped to open the app.
     if (_initialNotification != nil &&
-        [_initialNoticationID isEqualToString:_notificationOpenedAppID]) {
+        ([_initialNoticationID isEqualToString:_notificationOpenedAppID] || ([_initialNotification.allKeys containsObject:@"data"] && _initialNotification[@"data"][@"kNotificationChannelType"]))) {
       NSDictionary *initialNotificationCopy = [_initialNotification copy];
       _initialNotification = nil;
       return initialNotificationCopy;
