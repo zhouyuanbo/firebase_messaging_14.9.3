@@ -14,6 +14,8 @@ import java.util.HashMap;
 
 public class FlutterFirebaseMessagingReceiver extends BroadcastReceiver {
   private static final String TAG = "FLTFireMsgReceiver";
+  private static final String Silent_Flag = "silent";
+  private static final String Silent_Key = "content_available";
   static HashMap<String, RemoteMessage> notifications = new HashMap<>();
 
   @Override
@@ -38,6 +40,8 @@ public class FlutterFirebaseMessagingReceiver extends BroadcastReceiver {
       FlutterFirebaseMessagingStore.getInstance().storeFirebaseMessage(remoteMessage);
     }
 
+
+
     //  |-> ---------------------
     //      App in Foreground
     //   ------------------------
@@ -45,6 +49,14 @@ public class FlutterFirebaseMessagingReceiver extends BroadcastReceiver {
       FlutterFirebaseRemoteMessageLiveData.getInstance().postRemoteMessage(remoteMessage);
       return;
     }
+
+    //silent notification
+    if (remoteMessage.getData().containsKey(Silent_Flag)&&remoteMessage.getData().containsKey(Silent_Key)) {
+      FlutterFirebaseRemoteMessageLiveData.getInstance().postRemoteMessage(remoteMessage);
+      return;
+    }
+
+
 
     //  |-> ---------------------
     //    App in Background/Quit

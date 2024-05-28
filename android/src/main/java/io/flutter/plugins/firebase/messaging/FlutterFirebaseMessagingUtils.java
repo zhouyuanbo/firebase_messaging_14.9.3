@@ -35,6 +35,10 @@ class FlutterFirebaseMessagingUtils {
   private static final String KEY_TO = "to";
   private static final String KEY_TTL = "ttl";
 
+  private static final String Silent_Flag = "silent";
+  private static final String Silent_Key = "content_available";
+  private static final String Silent_Content_Key = "contentAvailable";
+
   static Map<String, Object> remoteMessageToMap(RemoteMessage remoteMessage) {
     Map<String, Object> messageMap = new HashMap<>();
     Map<String, Object> dataMap = new HashMap<>();
@@ -69,6 +73,9 @@ class FlutterFirebaseMessagingUtils {
     messageMap.put(KEY_DATA, dataMap);
     messageMap.put(KEY_TTL, remoteMessage.getTtl());
     messageMap.put(KEY_SENT_TIME, remoteMessage.getSentTime());
+    if(isSilentNotification(remoteMessage)){
+      messageMap.put(Silent_Content_Key, true);
+    }
 
     if (remoteMessage.getNotification() != null) {
       messageMap.put(
@@ -76,6 +83,13 @@ class FlutterFirebaseMessagingUtils {
     }
 
     return messageMap;
+  }
+
+  private boolean isSilentNotification(RemoteMessage message){
+    if(message.getData().containsKey(Silent_Flag) && message.getData().containsKey(Silent_Key) ){
+      return true;
+    }
+    return false;
   }
 
   private static Map<String, Object> remoteMessageNotificationToMap(
