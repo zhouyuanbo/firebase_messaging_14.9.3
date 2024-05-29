@@ -85,7 +85,7 @@ class FlutterFirebaseMessagingUtils {
     return messageMap;
   }
 
-  private boolean isSilentNotification(RemoteMessage message){
+  private static boolean isSilentNotification(RemoteMessage message){
     if(message.getData().containsKey(Silent_Flag) && message.getData().containsKey(Silent_Key) ){
       return true;
     }
